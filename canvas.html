@@ -7,21 +7,39 @@ canvas {
     width: 100vw;
     height: 100vh;
 }
+
+/* color canvas */
+div#colors {
+    display: flex;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    height: 42px;
+    box-shadow: 1px 1px 20px rgba(0,0,0,0.3);
+    border: 2px solid #eee;
+}
+
+div#colors color {
+    flex: 1;
+    background-color: attr(hex type(<color>), red);
+}
 </style>
 
 <canvas id=canvas width=500 height=500></canvas>
 
 <div id=colors>
-    <color hex=ff0000></color>
-    <color hex=00ff00></color>
-    <color hex=0000ff></color>
-    <color hex=ffff00></color>
-    <color hex=00ffff></color>
-    <color hex=ff00ff></color>
-    <color hex=4a412a></color>
+    <color hex=#ff0000></color>
+    <color hex=#00ff00></color>
+    <color hex=#0000ff></color>
+    <color hex=#ffff00></color>
+    <color hex=#00ffff></color>
+    <color hex=#ff00ff></color>
+    <color hex=#4a412a></color>
 </div>
 
 <script>
+// TODO mobile support (on touchstart touchend touchmove )
 // TODO draw line between last and current position
 // TODO check when mouse click is down <-- WARNING mobile
 const width      = 500;
@@ -33,9 +51,15 @@ const canvas     = document.getElementById('canvas');
 const context    = canvas.getContext('2d');
 let drawing      = false;
 
+// Fill background with dark mode because Janlu
+context.fillStyle = "#181818";
+context.fillRect(0, 0, canvas.width, canvas.height);
+
+// Set draw style
 context.lineWidth = 5;
 context.fillStyle = 'red';
 context.strokeStyle = 'red';
+
 canvas.addEventListener( 'mousedown', (event) => {
     drawing = true;
     context.beginPath();
