@@ -38,7 +38,7 @@ div#colors color {
 }
 
 div#colors color:active {
-    scale: 0.9;
+    scale: 0.4;
 }
 </style>
 
@@ -68,12 +68,17 @@ const pageWidth  = body.clientWidth;
 const pageHeight = body.clientHeight;
 const canvas     = document.getElementById('canvas');
 const context    = canvas.getContext('2d');
-const context2   = canvas.getContext('2d');
+const remoteCtx  = canvas.getContext('2d');
 let drawing      = false;
 
 // Fill background with dark mode because Janlu
 context.fillStyle = "#181818";
 context.fillRect(0, 0, canvas.width, canvas.height);
+
+// Set remote context draw styel
+remoteCtx.lineWidth = 5;
+remoteCtx.fillStyle = 'red';
+remoteCtx.strokeStyle = 'red';
 
 // Set draw style
 context.lineWidth = 5;
@@ -98,8 +103,8 @@ canvas.addEventListener( 'mousemove', (event) => {
     context.stroke(); 
 
     // Prevent broadcast unless we have enough data
-    if (previous.x){
-        broadcast(previous.x, x, previous.y, y, context.strokeStyle);
+    if (previous.x) {
+        broadcast(previous.x, previous.y, x, y, context.strokeStyle);
     }
 
     // Save last position for connecting lines on subscription
@@ -124,7 +129,11 @@ colors.addEventListener( 'click', (event) => {
 
 // Multi-user canvas
 function draw(x1, x2, y1, y2, style) {
-    console.log(x1, x2, y1, y2, style);
+    context.strokeStyle = style;
+    remoteCtx.beginPath();
+    remoteCtx.moveTo(x1, y1);
+    remoteCtx.lineTo(x2, y2);
+    remoteCtx.stroke(); 
 }
 
 pubnub.subscribe({
