@@ -38,14 +38,19 @@ div#colors color {
 }
 
 div#colors color:active {
-    scale: 0.4;
+    scale: 1.4;
+}
+div#colors color.active {
+    border: 2px solid white;
+    box-shadow: 0 0 10px white;
+    transform: scale(1.1);
 }
 </style>
 
 <canvas id=canvas width=500 height=500></canvas>
 
 <div id=colors>
-    <color hex=#ff0000></color>
+    <color hex=#ff0000 class=active></color>
     <color hex=#00ff00></color>
     <color hex=#0000ff></color>
     <color hex=#ffff00></color>
@@ -56,6 +61,11 @@ div#colors color:active {
 
 <script src="pubnub.js"></script>
 <script>
+// TODO disable local drawing (maybe) or exclude self-draw
+// TODO when creating  multiple context, even yourself is in the list
+// TODO auto detect shape and draw perfect cirlc / box square
+// TODO event.preventDefault();
+// TODO refactor so we can reuse 
 // TODO on page resize update canvas vars so painting is accurate
 // TODO add canvas load history
 // TODO context per remote user ( so each user can draw )
@@ -91,6 +101,7 @@ context.fillStyle = 'red';
 context.strokeStyle = 'red';
 
 canvas.addEventListener( 'touchstart', (event) => {
+    event.preventDefault();
     drawing = true;
     context.beginPath();
     const coords = getXY(event);
@@ -106,9 +117,11 @@ canvas.addEventListener( 'mouseup', (event) => {
     drawing = false;
 });
 canvas.addEventListener( 'touchend', (event) => {
+    event.preventDefault();
     drawing = false;
 });
 canvas.addEventListener( 'touchmove', (event) => {
+    event.preventDefault();
     if (!drawing) return;
     const coords = getXY(event);
     const x = coords.x;
@@ -144,9 +157,15 @@ canvas.addEventListener( 'mousemove', (event) => {
 });
 
 function getXY(event) {
+    const touch = event.changedTouches; 
+    if (touch) {
+        console.log(touch);
+        const x = Math.floor((touch[0].clientX / pageWidth) * width);
+        const y = Math.floor((touch[0].clientY / pageHeight) * height);
+        return {x:x, y:y};
+    }
     const x = Math.floor((event.offsetX / pageWidth) * width);
     const y = Math.floor((event.offsetY / pageHeight) * height);
-
     return {x:x, y:y};
 }
 
@@ -156,6 +175,8 @@ colors.addEventListener( 'click', (event) => {
     const color = target.getAttribute('hex');
     if (!color) return;
     context.strokeStyle = color;
+    document.querySelectorAll('#colors color').forEach(c => c.classList.remove('active'));
+    target.classList.add('active');
 });
 
 // Multi-user canvas
@@ -192,5 +213,4 @@ function broadcast(x1, x2, y1, y2, style) {
         },
     });
 }
-
 </script>
