@@ -158,15 +158,20 @@ canvas.addEventListener( 'mousemove', (event) => {
 
 function getXY(event) {
     const touch = event.changedTouches; 
+    let x = 0;
+    let y = 0;
     if (touch) {
-        console.log(touch);
-        const x = Math.floor((touch[0].clientX / pageWidth) * width);
-        const y = Math.floor((touch[0].clientY / pageHeight) * height);
-        return {x:x, y:y};
+        x = touch[0].clientX;
+        y = touch[0].clientY;
     }
-    const x = Math.floor((event.offsetX / pageWidth) * width);
-    const y = Math.floor((event.offsetY / pageHeight) * height);
-    return {x:x, y:y};
+    else {
+        x = event.offsetX;
+        y = event.offsetY;
+    }
+    return {
+        x: Math.floor((x / pageWidth) * width),
+        y: Math.floor((y / pageHeight) * height)
+    }
 }
 
 const colors = document.getElementById('colors');
