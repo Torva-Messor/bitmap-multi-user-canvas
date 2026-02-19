@@ -1,4 +1,6 @@
 <html>
+<!-- TODO add canvas load history -->
+<!-- TODO add number ONLINE USERS -->
 <head>
     <title>Shared Canvas</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,12 +26,10 @@ div#colors {
     gap: 4px;
     height: 44px;
     box-shadow: 1px 1px 20px rgba(0,0,0,0.3);
-    
     border: 2px solid rgba(255,255,255,0.1);
     background: rgba(255,255,255,0.1);
     padding: 8px;
     border-radius: 16px;
-
     backdrop-filter: blur(4px);
 }
 
@@ -39,7 +39,6 @@ div#colors color {
     background-color: attr(hex type(<color>), red);
     border-radius: 8px;
     border: 2px solid rgba(255,255,255,0.2);
-
     transition: all 150ms cubic-bezier(.2,0,0,1);
 }
 
@@ -67,42 +66,25 @@ div#colors color.active {
 
 <script src="pubnub.js"></script>
 <script>
-// TODO add pen icon
-// TODO filter-expresion remove on userId
-// TODO fix color per user
-// TODO transmit curosor movent
-// TODO context per remote user ( so each user can draw )
-// TODO disable local drawing (maybe) or exclude self-draw
-// TODO when creating  multiple context, even yourself is in the list
-// TODO auto detect shape and draw perfect cirlc / box square
-// TODO refactor so we can reuse 
-// TODO on page resize update canvas vars so painting is accurate
-// TODO add canvas load history
-// TODO add number ONLINE USERS
-// TODO draw line between last and current position
 const userId  = `userId-${Math.random()}.${Math.random()}`;
 const pubnub  = PubNub({});
 const channel = 'shared-canvas-v2';
-const width   = 500;
-const height  = 500;
 const body    = document.querySelector('body');
 const canvas  = document.getElementById('canvas');
 const users   = {};
 const context = canvas.getContext('2d');
 
 // Get user by ID. Can be remote or local user
-function getUser(userId) {
-    if (userId in users) return users[userId];
-    users[userId] = {
-        lastCoords: null,
-        state: {
-            userId  : userId,
-            drawing : false,
-            coords  : { x: 0, y: 0 },
-            style   : 'red',
-        },
+function getUser(id) {
+    if (id in users) return users[id];
+    users[id] = {
+        userId     : id,
+        drawing    : false,
+        coords     : { x: 0, y: 0 },
+        style      : 'red',
+        lastCoords : null,
     };
-    return users[userId];
+    return users[id];
 }
 
 // Fill background with dark mode because Janlu
@@ -112,10 +94,10 @@ context.fillRect(0, 0, canvas.width, canvas.height);
 // Draw line segment between last and current position
 function draw(userId) {
     const user   = getUser(userId);
-    const coords = user.state.coords;
-    const style  = user.state.style;
+    const coords = user.coords;
+    const style  = user.style;
 
-    if (!user.state.drawing) {
+    if (!user.drawing) {
         user.lastCoords = null;
         return;
     }
@@ -136,56 +118,26 @@ function draw(userId) {
     user.lastCoords = { x: coords.x, y: coords.y };
 }
 
-function startCapture(event) {
+function capture(event) {
     event.preventDefault();
     const user = getUser(userId);
-    user.state.coords = getXY(event);
-    user.state.drawing = true;
-    broadcast(user.state);
-}
-function moveCapture(event) {
-    event.preventDefault();
-    const user = getUser(userId);
-    user.state.coords = getXY(event);
-    if (user.state.drawing) broadcast(user.state);
-}
-function endCapture(event) {
-    event.preventDefault();
-    const user = getUser(userId);
-    user.state.coords = getXY(event);
-    user.state.drawing = false;
-    broadcast(user.state);
+    user.coords = getXY(event);
+    if (event.type === 'pointerdown') user.drawing = true;
+    if (event.type === 'pointerup')   user.drawing = false;
+    if (user.drawing || event.type === 'pointerup') broadcast(user);
 }
 
-// Start
-canvas.addEventListener( 'touchstart', startCapture);
-canvas.addEventListener( 'mousedown', startCapture);
-
-// End
-canvas.addEventListener( 'mouseup', endCapture);
-canvas.addEventListener( 'touchend', endCapture);
-
-// Move
-canvas.addEventListener( 'touchmove', moveCapture);
-canvas.addEventListener( 'mousemove', moveCapture);
+// Event Listeners
+canvas.addEventListener('pointerdown', capture);
+canvas.addEventListener('pointermove', capture);
+canvas.addEventListener('pointerup',   capture);
 
 // Get Scaled Coordinates
 function getXY(event) {
-    const touch = event.changedTouches; 
-    let x = 0;
-    let y = 0;
-    if (touch) {
-        x = touch[0].clientX;
-        y = touch[0].clientY;
-    }
-    else {
-        x = event.offsetX;
-        y = event.offsetY;
-    }
     return {
-        x: Math.floor((x / body.clientWidth) * width),
-        y: Math.floor((y / body.clientHeight) * height),
-    }
+        x: Math.floor((event.clientX / body.clientWidth) * canvas.width),
+        y: Math.floor((event.clientY / body.clientHeight) * canvas.height),
+    };
 }
 
 // Color Picker
@@ -195,7 +147,7 @@ colors.addEventListener( 'click', (event) => {
     const target = event.target;
     const color = target.getAttribute('hex');
     if (!color) return;
-    user.state.style = color;
+    user.style = color;
     document.querySelectorAll('#colors color').forEach(c => c.classList.remove('active'));
     target.classList.add('active');
 });
@@ -203,10 +155,9 @@ colors.addEventListener( 'click', (event) => {
 pubnub.subscribe({
     channel: channel,
     messages: (state) => {
-        const userId = state.userId;
-        const user = getUser(userId);
-        user.state = state;
-        draw(userId);
+        const user = getUser(state.userId);
+        Object.assign(user, state);
+        draw(state.userId);
     }
 });
 
