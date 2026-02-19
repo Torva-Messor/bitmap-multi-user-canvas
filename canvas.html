@@ -80,58 +80,60 @@ div#colors color.active {
 // TODO add canvas load history
 // TODO add number ONLINE USERS
 // TODO draw line between last and current position
-const userId     = `userId-${Math.random()}.${Math.random()}`;
-const pubnub     = PubNub({});
-const channel    = 'shared-canvas-v2';
-const width      = 500;
-const height     = 500;
-const body       = document.querySelector('body');
-const canvas     = document.getElementById('canvas');
-const contexts   = {};
-const context    = canvas.getContext('2d');
+const userId  = `userId-${Math.random()}.${Math.random()}`;
+const pubnub  = PubNub({});
+const channel = 'shared-canvas-v2';
+const width   = 500;
+const height  = 500;
+const body    = document.querySelector('body');
+const canvas  = document.getElementById('canvas');
+const users   = {};
+const context = canvas.getContext('2d');
 
-// Get user with context and x/y coords
-getUser(userId);
+// Get user by ID. Can be remote or local user
 function getUser(userId) {
-    if (userId in contexts) return contexts[userId];
-    contexts[userId] = {
-        context : canvas.getContext('2d'),
+    if (userId in users) return users[userId];
+    users[userId] = {
+        lastCoords: null,
         state: {
             userId  : userId,
             drawing : false,
-            coords  : { x: 0, y: 0},
+            coords  : { x: 0, y: 0 },
             style   : 'red',
         },
     };
-    const user = contexts[userId];
-    user.context.lineWidth = 5;
-    user.context.strokeStyle = 'red';
-    return user;
+    return users[userId];
 }
 
 // Fill background with dark mode because Janlu
 context.fillStyle = "#181818";
 context.fillRect(0, 0, canvas.width, canvas.height);
 
-// Draw line
+// Draw line segment between last and current position
 function draw(userId) {
-    const user    = getUser(userId);
-    const context = user.context;
-    const coords  = user.state.coords;
-    const style   = user.state.style;
+    const user   = getUser(userId);
+    const coords = user.state.coords;
+    const style  = user.state.style;
 
-    // Start
     if (!user.state.drawing) {
-        context.strokeStyle = style;
-        context.beginPath();
-        context.moveTo(coords.x, coords.y);
+        user.lastCoords = null;
+        return;
     }
 
-    // Draw line
-    if (user.state.drawing) {
-        context.lineTo(coords.x, coords.y);
-        context.stroke(); 
+    if (!user.lastCoords) {
+        user.lastCoords = { x: coords.x, y: coords.y };
+        return;
     }
+
+    context.beginPath();
+    context.strokeStyle = style;
+    context.lineWidth = 5;
+    context.lineCap = 'round';
+    context.moveTo(user.lastCoords.x, user.lastCoords.y);
+    context.lineTo(coords.x, coords.y);
+    context.stroke();
+
+    user.lastCoords = { x: coords.x, y: coords.y };
 }
 
 function startCapture(event) {
@@ -145,7 +147,7 @@ function moveCapture(event) {
     event.preventDefault();
     const user = getUser(userId);
     user.state.coords = getXY(event);
-    broadcast(user.state);
+    if (user.state.drawing) broadcast(user.state);
 }
 function endCapture(event) {
     event.preventDefault();
@@ -193,7 +195,6 @@ colors.addEventListener( 'click', (event) => {
     const target = event.target;
     const color = target.getAttribute('hex');
     if (!color) return;
-    user.context.strokeStyle = color;
     user.state.style = color;
     document.querySelectorAll('#colors color').forEach(c => c.classList.remove('active'));
     target.classList.add('active');
