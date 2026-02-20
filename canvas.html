@@ -190,16 +190,16 @@ pubnub.subscribe({
 function broadcast(state) {
     pubnub.publish({
         channel: channel,
-            message: state,
-        });
+        message: state,
+    });
 }
 
 
-/*
 function loadHistory(channel, limit) {
 }
 
 
+/*
 // Get All History
 function get_all_history(args) {
     var channel  = args['channel']
